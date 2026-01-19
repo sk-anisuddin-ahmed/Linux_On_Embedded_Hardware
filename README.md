@@ -1,7 +1,6 @@
 # Linux_On_Embedded_Hardware
 
-A repository of Linux-based code and examples for embedded hardware platforms.  
-Currently **BeagleBone Black** and **Raspberry Pi 3A+** code examples.
+A repository of Linux-based code and examples for embedded hardware platforms.
 
 ---
 
