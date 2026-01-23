@@ -1,0 +1,44 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+	compatible = "ti,am335x-bone-black", "ti,am335x-bone", "ti,am33xx";
+
+    fragment@0 {
+        target = <&leds>;
+        __overlay__ {
+            status = "disabled";
+        };
+    };
+
+	fragment@1 {
+		target-path = "/";
+		__overlay__ {
+			anis-leds {
+				compatible = "anis-gpio-leds";
+				pinctrl-names = "default";
+				pinctrl-0 = <&user_leds_s0>;
+
+				anis-led0 {
+					gpios = <&gpio1 21 0>;
+					default-state = "off";
+				};
+
+				anis-led1 {
+					gpios = <&gpio1 22 0>;
+					default-state = "off";
+				};
+
+				anis-led2 {
+					gpios = <&gpio1 23 0>;
+					default-state = "off";
+				};
+
+				anis-led3 {
+					gpios = <&gpio1 24 0>;
+					default-state = "off";
+				};
+			};
+		};
+	};
+};

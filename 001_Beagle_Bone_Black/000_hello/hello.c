@@ -4,14 +4,14 @@
 
 static int __init hello_init(void) 
 {
-    printk(KERN_INFO "Hello, Sk Anisuddin Ahmed!\n");
+    printk(KERN_INFO "Hello\n");
 
     return 0;
 }
 
 static void __exit hello_exit(void) 
 {
-    printk(KERN_INFO "Goodbye, Module unloaded\n");
+    printk(KERN_INFO "Goodbye\n");
 }
 
 module_init(hello_init);
@@ -19,4 +19,3 @@ module_exit(hello_exit);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Anis");
-MODULE_DESCRIPTION("Hello World Kernel Module");
