@@ -5,7 +5,7 @@ A repository of Linux-based code and examples for embedded hardware platforms.
 ---
 
 ## Boards
-- BeagleBone Black
+- Beagle Bone Black
 - Raspberry Pi 3A+
 
 ---
