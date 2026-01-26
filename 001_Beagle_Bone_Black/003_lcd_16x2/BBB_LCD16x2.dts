@@ -1,0 +1,43 @@
+/dts-v1/;
+/plugin/;
+
+#include "dt-bindings/gpio/gpio.h"
+#include "dt-bindings/pinctrl/am33xx.h"
+
+/ {
+	compatible = "ti,beaglebone", "ti,beaglebone-black";
+	
+	fragment@0 {
+		target = <&am33xx_pinmux>;
+		__overlay__ {
+			pinmux_lcd16x2: pinmux_lcd16x2 {
+				pinctrl-single,pins = <
+					AM33XX_PADCONF(AM335X_PIN_GPMC_ADVN_ALE,PIN_OUTPUT, MUX_MODE7)
+					AM33XX_PADCONF(AM335X_PIN_GPMC_OEN_REN,	PIN_OUTPUT, MUX_MODE7)					
+					AM33XX_PADCONF(AM335X_PIN_GPMC_BEN0_CLE,PIN_OUTPUT, MUX_MODE7)
+					AM33XX_PADCONF(AM335X_PIN_GPMC_WEN,	PIN_OUTPUT, MUX_MODE7)
+					AM33XX_PADCONF(AM335X_PIN_GPMC_AD13,	PIN_OUTPUT, MUX_MODE7)
+					AM33XX_PADCONF(AM335X_PIN_GPMC_AD12,	PIN_OUTPUT, MUX_MODE7)
+				>;
+			};
+		};
+	};
+
+	fragment@1 {
+		target-path = "/";
+		__overlay__ {
+			lcd16x2 {
+				compatible = "lcd16x2, anis";
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinmux_lcd16x2>;
+				
+				rs-gpios = <&gpio2 2	GPIO_ACTIVE_HIGH>;
+				en-gpios = <&gpio2 3	GPIO_ACTIVE_HIGH>;
+				d4-gpios = <&gpio2 5	GPIO_ACTIVE_HIGH>;
+				d5-gpios = <&gpio2 4	GPIO_ACTIVE_HIGH>;
+				d6-gpios = <&gpio1 13	GPIO_ACTIVE_HIGH>;
+				d7-gpios = <&gpio1 12	GPIO_ACTIVE_HIGH>;
+			};
+		};
+	};
+};

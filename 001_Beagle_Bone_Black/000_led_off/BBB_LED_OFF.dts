@@ -1,0 +1,20 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+	compatible = "ti,beaglebone", "ti,beaglebone-black", "ti,am335x-bone", "ti,am33xx";
+
+	fragment@0 {
+		target-path = "/leds";
+		__overlay__ {
+			compatible = "";
+			pinctrl-names = "";
+			pinctrl-0 = <>;
+			status = "disabled";			
+			led2 {};
+			led3 {};
+			led4 {};
+			led5 {};
+		};
+	};
+};

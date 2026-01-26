@@ -17,12 +17,6 @@ clean: rmmod
 dtbo:
 	cpp -nostdinc -I $(KER_PATH)/include $(DTS_NAME).dts | dtc -O dtb -o $(DTS_NAME).dtbo -b 0 -@
 	sudo cp -f $(DTS_NAME).dtbo /boot/dtbs/$(shell uname -r)/overlays/
-	
-	/*Add dtb-overlay to /boot/uENV.txt (Kernel v6.12.66)
-	----------------------------------------------------
-	enable_uboot_overlays=1
-	dtb_overlay=/overlays/BBB_LED_TEST.dtbo
-	*/
 
 dtbo_pre_processor:
 	cpp -nostdinc -I $(KER_PATH)/include $(DTS_NAME).dts > $(DTS_NAME).pp.dts

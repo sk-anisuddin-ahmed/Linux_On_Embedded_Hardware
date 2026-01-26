@@ -10,11 +10,11 @@
     fragment@0 {
         target = <&am33xx_pinmux>;
         __overlay__ {
-            anis_led_pins {
+            anis_led_pins: anis_led_pins {
                 pinctrl-single,pins = <
-					AM33XX_PADCONF(AM335X_PIN_GPMC_ADVN_ALE, PIN_OUTPUT, MUX_MODE7)
-					AM33XX_PADCONF(AM335X_PIN_GPMC_OEN_REN,  PIN_OUTPUT, MUX_MODE7)
-					AM33XX_PADCONF(AM335X_PIN_GPMC_WEN, 	 PIN_OUTPUT, MUX_MODE7)
+					AM33XX_PADCONF(AM335X_PIN_GPMC_ADVN_ALE,PIN_OUTPUT, MUX_MODE7)
+					AM33XX_PADCONF(AM335X_PIN_GPMC_OEN_REN, PIN_OUTPUT, MUX_MODE7)
+					AM33XX_PADCONF(AM335X_PIN_GPMC_WEN, 	PIN_OUTPUT, MUX_MODE7)
                 >;
             };
         };
