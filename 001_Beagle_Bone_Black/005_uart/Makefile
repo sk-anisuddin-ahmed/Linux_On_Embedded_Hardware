@@ -1,9 +1,8 @@
-obj-m += .o
+obj-m += uart2_ker.o
 
 KER_PATH := /lib/modules/$(shell uname -r)/build
-DTS_NAME := 
+DTS_NAME := BBB_UART2
 MOD_NAME := $(basename $(obj-m))
-KO_NAME  := $(MOD_NAME).ko
 
 all: clean dtbo load
 
@@ -21,7 +20,7 @@ dtbo:
 	sudo nano /boot/uEnv.txt
 
 insmod:
-	sudo insmod $(KO_NAME)
+	sudo insmod $(MOD_NAME).ko
 
 rmmod:
 	@if lsmod | grep -q "^$(MOD_NAME)"; then \
