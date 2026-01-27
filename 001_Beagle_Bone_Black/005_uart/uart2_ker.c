@@ -6,40 +6,106 @@
 #include <linux/device.h>
 #include <linux/platform_device.h>
 #include <linux/io.h>
+#include <linux/of.h>
+#include <linux/of_device.h>
+#include <linux/ioport.h>
+
+#define UART_THR     0x00
+#define UART_RHR     0x00
+#define UART_DLL     0x00
+#define UART_IER     0x04
+#define UART_DLH     0x04
+#define UART_FCR     0x08
+#define UART_LCR     0x0C
+#define UART_LSR     0x14
+#define UART_MDR1    0x20
+
+
+#define UART_LSR_DR			(1 << 0)
+#define UART_LSR_THRE   	(1 << 5)
+#define UART_LCR_WLS_8  	(3 << 0)
+#define UART_LCR_STOP1 		(0 << 2)
+#define UART_LCR_DLAB  		(1 << 7)
+#define UART_FCR_FIFO_EN   	(1 << 0)
+#define UART_FCR_RX_CLR    	(1 << 1)
+#define UART_FCR_TX_CLR    	(1 << 2)
+
+#define UART_MDR1_DISABLE  	0x7
+#define UART_MDR1_UART16   	0x0
 
 struct uart2_priv {
     void __iomem *base;
 } *priv;
 
-void uart2_init()
+static void uart2_init(void)
 {
-    
+    writel(UART_MDR1_DISABLE, priv->base + UART_MDR1);
+    writel(0x0, priv->base + UART_IER);
+    writel(UART_LCR_DLAB, priv->base + UART_LCR);
+    writel(0x1A, priv->base + UART_DLL);
+    writel(0x00, priv->base + UART_DLH);
+    writel(UART_LCR_WLS_8 | UART_LCR_STOP1, priv->base + UART_LCR);
+    writel(UART_FCR_FIFO_EN | UART_FCR_RX_CLR | UART_FCR_TX_CLR, priv->base + UART_FCR);
+    writel(UART_MDR1_UART16, priv->base + UART_MDR1);
 }
 
-void uart2_send(char* msg)
+static void uart2_send_char(char c)
 {
-    
+    while (!(readl(priv->base + UART_LSR) & UART_LSR_THRE)) {
+        cpu_relax();
+	}
+    writel(c, priv->base + UART_THR);
 }
 
-void uart2_wait(char* buf, int len)
+static char uart2_wait_char(void)
 {
-    
+    while (!(readl(priv->base + UART_LSR) & UART_LSR_DR)) {
+        cpu_relax();
+	}
+    return (char)(readl(priv->base + UART_RHR) & 0xFF);
+}
+
+static void uart2_send(char *msg)
+{
+    int i = 0;
+
+    if (!msg) {
+        return;
+	}
+
+    while (msg[i] != '\0') {
+        uart2_send_char((char)msg[i]);
+        i++;
+    }
+}
+
+static void uart2_wait(char *buf, int len)
+{
+    int i;
+
+    if (!buf || len <= 0) {
+        return;
+	}
+
+    for (i = 0; i < len; i++) {
+        buf[i] = (char)uart2_wait_char();
+    }
 }
 
 static ssize_t uart2_write(struct file *file, const char __user *buf, size_t len, loff_t *ppos)
 {
-    size_t i;
     char kbuf[256];
     size_t to_write;
-    u32 lsr;
 
-    if (!priv || !priv->base)
+    if (!priv || !priv->base) {
         return -ENODEV;
-
-    to_write = min(len, sizeof(kbuf));
-    if (copy_from_user(kbuf, buf, to_write))
-        return -EFAULT;
+	}
 	
+    to_write = min(len, sizeof(kbuf));
+    if (copy_from_user(kbuf, buf, to_write)) {
+        return -EFAULT;
+	}
+	kbuf[to_write - 1] = '\0';
 	uart2_send(kbuf);
     return to_write;
 }
@@ -47,11 +113,12 @@ static ssize_t uart2_write(struct file *file, const char __user *buf, size_t len
 static ssize_t uart2_read(struct file *file, char __user *buf, size_t len, loff_t *ppos)
 {
     char kbuf[32];
-    u32 lsr;
-    size_t to_read = min(len, 16);
+    size_t to_read = min(len, 8);
+	kbuf[to_read] = '\0';
 
-    if (!priv || !priv->base)
+    if (!priv || !priv->base) {
         return -ENODEV;
+	}
 	
 	uart2_wait(kbuf, to_read);
     if (copy_to_user(buf, kbuf, to_read)) {
@@ -76,10 +143,31 @@ static struct miscdevice uart2_dev = {
 
 static int uart2_probe(struct platform_device *pdev)
 {
+	struct resource *res;
     int ret;
+
+    res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+    if (!res) {
+        dev_err(&pdev->dev, "No reg property found\n");
+        return -ENODEV;
+    }
+
+    dev_info(&pdev->dev,
+             "UART2 resource: start=0x%lx end=0x%lx size=0x%lx flags=0x%lx\n",
+             (unsigned long)res->start,
+             (unsigned long)res->end,
+             (unsigned long)(resource_size(res)),
+             (unsigned long)res->flags);
+	
     priv = devm_kzalloc(&pdev->dev, sizeof(struct uart2_priv), GFP_KERNEL);
     if (!priv) {
         return -ENOMEM;
+	}
+	
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!res) { 
+		dev_err(&pdev->dev, "No reg property found\n"); 
+		return -ENODEV;
 	}
 
     priv->base = devm_platform_ioremap_resource(pdev, 0);
@@ -117,7 +205,7 @@ static struct platform_driver uart2_driver = {
     .probe  = uart2_probe,
     .remove = uart2_remove,
     .driver = {
-        .name = "UART2_Custom_Driver",
+        .name = "uart2_driver",
         .of_match_table = uart2_dt_ids,
     },
 };

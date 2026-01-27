@@ -1,36 +1,31 @@
 /dts-v1/;
 /plugin/;
 
-#include "dt-bindings/gpio/gpio.h"
-#include "dt-bindings/pinctrl/am33xx.h"
+#include <dt-bindings/pinctrl/am33xx.h>
 
 / {
-	compatible = "ti,beaglebone", "ti,beaglebone-black";
+    compatible = "ti,beaglebone", "ti,beaglebone-black";
 	
-	fragment@0 {
-		target = <&am33xx_pinmux>;
-		__overlay__ {
-			uart2_pinmux: uart2_pinmux {
-				pinctrl-single,pins = <					
-					AM33XX_PADCONF(AM335X_PIN_SPI0_D0,		(PIN_OUTPUT | PIN_OUTPUT_PULLUP),	MUX_MODE1)
-					AM33XX_PADCONF(AM335X_PIN_SPI0_SCLK,	(PIN_OUTPUT | PIN_OUTPUT_PULLUP),	MUX_MODE1)
-				>;
-			};
-		};
-	};
+    fragment@0 {
+        target = <&am33xx_pinmux>;
+        __overlay__ {
+            uart2_pinmux: uart2_pinmux {
+                pinctrl-single,pins = <
+                    AM33XX_PADCONF(AM335X_PIN_SPI0_SCLK, PIN_INPUT_PULLUP,  MUX_MODE1)
+                    AM33XX_PADCONF(AM335X_PIN_SPI0_D0,   PIN_OUTPUT_PULLUP, MUX_MODE1)
+                >;
+            };
+        };
+    };
+	
+    fragment@1 {
+        target = <&uart2>;
+        __overlay__ {
+            status = "okay";
+            compatible = "uart2,anis";
 
-	fragment@1 {
-		target-path = "/";
-		__overlay__ {
-			compatible = "uart2,anis";
-			pinctrl-names = "default";
-			pinctrl-0 = <&uart2_pinmux>;
-			status = "okay";
-			
-			tx-gpios = <&gpio0	3	GPIO_ACTIVE_LOW>;
-			rx-gpios = <&gpio0	2	GPIO_ACTIVE_LOW>;			
-    
-			reg = <0x48024000 0x1000>;
-		};
-	};
+            pinctrl-names = "default";
+            pinctrl-0 = <&uart2_pinmux>;
+        };
+    };
 };
