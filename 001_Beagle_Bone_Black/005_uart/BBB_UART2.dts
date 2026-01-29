@@ -5,7 +5,7 @@
 
 / {
     compatible = "ti,beaglebone", "ti,beaglebone-black";
-	
+
     fragment@0 {
         target = <&am33xx_pinmux>;
         __overlay__ {
@@ -17,15 +17,18 @@
             };
         };
     };
-	
+
     fragment@1 {
         target = <&uart2>;
         __overlay__ {
-            status = "okay";
-            compatible = "uart2,anis";
-
             pinctrl-names = "default";
             pinctrl-0 = <&uart2_pinmux>;
+            status = "okay";
+
+            anis_uart2: anis-uart2 {
+                compatible = "anis,uart2-test";
+                status = "okay";
+            };
         };
     };
 };

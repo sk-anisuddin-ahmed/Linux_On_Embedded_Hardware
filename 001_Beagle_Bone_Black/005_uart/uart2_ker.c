@@ -1,212 +1,190 @@
 #include <linux/module.h>
-#include <linux/miscdevice.h>
+#include <linux/kernel.h>
+#include <linux/init.h>
 #include <linux/fs.h>
 #include <linux/uaccess.h>
-#include <linux/init.h>
-#include <linux/device.h>
+#include <linux/miscdevice.h>
+#include <linux/of.h>
 #include <linux/platform_device.h>
 #include <linux/io.h>
-#include <linux/of.h>
-#include <linux/of_device.h>
-#include <linux/ioport.h>
-
-#define UART_THR     0x00
-#define UART_RHR     0x00
-#define UART_DLL     0x00
-#define UART_IER     0x04
-#define UART_DLH     0x04
-#define UART_FCR     0x08
-#define UART_LCR     0x0C
-#define UART_LSR     0x14
-#define UART_MDR1    0x20
-
-
-#define UART_LSR_DR			(1 << 0)
-#define UART_LSR_THRE   	(1 << 5)
-#define UART_LCR_WLS_8  	(3 << 0)
-#define UART_LCR_STOP1 		(0 << 2)
-#define UART_LCR_DLAB  		(1 << 7)
-#define UART_FCR_FIFO_EN   	(1 << 0)
-#define UART_FCR_RX_CLR    	(1 << 1)
-#define UART_FCR_TX_CLR    	(1 << 2)
-
-#define UART_MDR1_DISABLE  	0x7
-#define UART_MDR1_UART16   	0x0
 
 struct uart2_priv {
     void __iomem *base;
 } *priv;
 
-static void uart2_init(void)
-{
-    writel(UART_MDR1_DISABLE, priv->base + UART_MDR1);
-    writel(0x0, priv->base + UART_IER);
-    writel(UART_LCR_DLAB, priv->base + UART_LCR);
-    writel(0x1A, priv->base + UART_DLL);
-    writel(0x00, priv->base + UART_DLH);
-    writel(UART_LCR_WLS_8 | UART_LCR_STOP1, priv->base + UART_LCR);
-    writel(UART_FCR_FIFO_EN | UART_FCR_RX_CLR | UART_FCR_TX_CLR, priv->base + UART_FCR);
-    writel(UART_MDR1_UART16, priv->base + UART_MDR1);
-}
+#define UART_TX        0x00     // Transmit Buffer
+#define UART_RX        0x00     // Receiver Buffer
+#define UART_LSR       0x14     // Status Register
+
+#define UART_LSR_THRE  (1 << 5) // TX Empty bit
+#define UART_LSR_DR    (1 << 0) // RX Ready bit
+
 
 static void uart2_send_char(char c)
 {
-    while (!(readl(priv->base + UART_LSR) & UART_LSR_THRE)) {
+    while (!(readb(priv->base + UART_LSR) & UART_LSR_THRE))
+    {
         cpu_relax();
-	}
-    writel(c, priv->base + UART_THR);
+    }
+
+    writeb(c, priv->base + UART_TX);
 }
 
-static char uart2_wait_char(void)
+static char uart2_receive_char(void)
 {
-    while (!(readl(priv->base + UART_LSR) & UART_LSR_DR)) {
+    while (!(readb(priv->base + UART_LSR) & UART_LSR_DR))
+    {
         cpu_relax();
-	}
-    return (char)(readl(priv->base + UART_RHR) & 0xFF);
-}
-
-static void uart2_send(char *msg)
-{
-    int i = 0;
-
-    if (!msg) {
-        return;
-	}
-
-    while (msg[i] != '\0') {
-        uart2_send_char((char)msg[i]);
-        i++;
     }
+
+    return readb(priv->base + UART_RX);
 }
 
-static void uart2_wait(char *buf, int len)
-{
-    int i;
-
-    if (!buf || len <= 0) {
-        return;
-	}
-
-    for (i = 0; i < len; i++) {
-        buf[i] = (char)uart2_wait_char();
-    }
-}
-
-static ssize_t uart2_write(struct file *file, const char __user *buf, size_t len, loff_t *ppos)
+static ssize_t uart2_read(struct file *file, char __user *buf, size_t len, loff_t *offset)
 {
     char kbuf[256];
-    size_t to_write;
+    size_t i;
 
-    if (!priv || !priv->base) {
+    if (!priv || !priv->base)
+    {
         return -ENODEV;
-	}
-	
-    to_write = min(len, sizeof(kbuf));
-    if (copy_from_user(kbuf, buf, to_write)) {
+    }
+
+    if (len > sizeof(kbuf))
+    {
+        len = sizeof(kbuf);
+    }
+
+    for (i = 0; i < len; i++)
+    {
+        kbuf[i] = uart2_receive_char();
+        if (kbuf[i] == '\n')
+        {
+            break;
+        }
+    }
+
+    if (copy_to_user(buf, kbuf, i))
+	{
         return -EFAULT;
 	}
-	kbuf[to_write - 1] = '\0';
-	uart2_send(kbuf);
-    return to_write;
+
+    return i + 1;
 }
 
-static ssize_t uart2_read(struct file *file, char __user *buf, size_t len, loff_t *ppos)
+static ssize_t uart2_write(struct file *file, const char __user *buf, size_t len, loff_t *offset)
 {
-    char kbuf[32];
-    size_t to_read = min(len, 8);
-	kbuf[to_read] = '\0';
+    char kbuf[256];
+    size_t i;
 
-    if (!priv || !priv->base) {
+    if (!priv || !priv->base)
+    {
         return -ENODEV;
-	}
-	
-	uart2_wait(kbuf, to_read);
-    if (copy_to_user(buf, kbuf, to_read)) {
-        return -EFAULT;
-	}
+    }
 
-    return to_read;
+    if (len > sizeof(kbuf))
+    {
+        len = sizeof(kbuf);
+    }
+
+    if (copy_from_user(kbuf, buf, len))
+    {
+        return -EFAULT;
+    }
+
+    for (i = 0; i < len; i++) 
+    {
+        uart2_send_char(kbuf[i]);
+    }
+
+    return len;
 }
 
-static struct file_operations uart2_fops = {
-	.owner = THIS_MODULE,
-	.write = uart2_write,
-	.read = uart2_read
+static const struct file_operations uart2_fops = {
+    .owner = THIS_MODULE,
+    .read  = uart2_read,
+    .write = uart2_write,
 };
 
-static struct miscdevice uart2_dev = {
+static struct miscdevice uart2_misc = {
     .minor = MISC_DYNAMIC_MINOR,
-    .name = "uart2_chardev",
-    .fops = &uart2_fops,
-    .mode = 0666
+    .name  = "uart2_ker",
+    .fops  = &uart2_fops,
 };
 
 static int uart2_probe(struct platform_device *pdev)
 {
-	struct resource *res;
-    int ret;
+    struct device_node *parent_np;
+    struct resource *res;
+    int ret;    
 
-    res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-    if (!res) {
-        dev_err(&pdev->dev, "No reg property found\n");
+    pr_info("%s: function called\n", __func__);
+
+    parent_np = of_get_parent(pdev->dev.of_node);
+    if (!parent_np) 
+    {
+        pr_err("Parent node not found\n");
         return -ENODEV;
     }
 
-    dev_info(&pdev->dev,
-             "UART2 resource: start=0x%lx end=0x%lx size=0x%lx flags=0x%lx\n",
-             (unsigned long)res->start,
-             (unsigned long)res->end,
-             (unsigned long)(resource_size(res)),
-             (unsigned long)res->flags);
-	
-    priv = devm_kzalloc(&pdev->dev, sizeof(struct uart2_priv), GFP_KERNEL);
-    if (!priv) {
-        return -ENOMEM;
-	}
-	
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	if (!res) { 
-		dev_err(&pdev->dev, "No reg property found\n"); 
-		return -ENODEV;
-	}
+    pr_info("Parent node name: %s\n", parent_np->name);
+    pr_info("Device node name: %s\n", pdev->dev.of_node->name);
+    res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+    if (!res) 
+    {
+        pr_err("Failed to get platform resource\n");
+        return -ENODEV;
+    }
 
-    priv->base = devm_platform_ioremap_resource(pdev, 0);
-    if (IS_ERR(priv->base)) {
-        dev_err(&pdev->dev, "Failed to ioremap registers\n");
+    pr_info("Resource start: 0x%lx, end: 0x%lx\n", (unsigned long)res->start, (unsigned long)res->end);
+
+    priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
+    if (!priv) 
+    {
+        pr_err("Failed to allocate memory for priv\n");
+        return -ENOMEM;
+    }
+
+    platform_set_drvdata(pdev, priv);
+
+    priv->base = devm_ioremap_resource(&pdev->dev, res);
+    if (IS_ERR(priv->base)) 
+    {
+        pr_err("Failed to map UART2 regs\n");
         return PTR_ERR(priv->base);
     }
-	
-    platform_set_drvdata(pdev, priv);
-    dev_info(&pdev->dev, "UART2 driver probed\n");
-	
-	uart2_init();
 
-    ret = misc_register(&uart2_dev);
-    if (ret) {
-        dev_err(&pdev->dev, "Failed to register misc device\n");
+    pr_info("UART2 mapped at %p\n", priv->base);
+
+    ret = misc_register(&uart2_misc);
+    if (ret) 
+    {
+        pr_err("Failed to register misc device\n");
         return ret;
     }
+
+    pr_info("Created /dev/uart2_ker\n");
     return 0;
 }
 
 static void uart2_remove(struct platform_device *pdev)
 {
-    misc_deregister(&uart2_dev);
-    dev_info(&pdev->dev, "UART2 driver removed\n");
+    misc_deregister(&uart2_misc);
+    pr_info("%s: function called\n", __func__);
 }
 
-static const struct of_device_id uart2_dt_ids[] = {
-    { .compatible = "uart2,anis"},
-    {}
+static const struct of_device_id uart2_of_match[] = {
+    { .compatible = "anis,uart2-test" },
+    {},
 };
-MODULE_DEVICE_TABLE(of, uart2_dt_ids);
+MODULE_DEVICE_TABLE(of, uart2_of_match);
 
 static struct platform_driver uart2_driver = {
     .probe  = uart2_probe,
     .remove = uart2_remove,
     .driver = {
         .name = "uart2_driver",
-        .of_match_table = uart2_dt_ids,
+        .of_match_table = uart2_of_match,
     },
 };
 module_platform_driver(uart2_driver);

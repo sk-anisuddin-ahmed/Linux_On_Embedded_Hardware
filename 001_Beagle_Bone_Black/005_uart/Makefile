@@ -1,17 +1,17 @@
 obj-m += uart2_ker.o
 
-KER_PATH := /lib/modules/$(shell uname -r)/build
 DTS_NAME := BBB_UART2
+KER_PATH := /lib/modules/$(shell uname -r)/build
 MOD_NAME := $(basename $(obj-m))
 
-all: clean dtbo load
+all: clean load dtbo
 
 modules:
 	$(MAKE) -C $(KER_PATH) M=$(PWD) modules
 
 clean: rmmod
 	$(MAKE) -C $(KER_PATH) M=$(PWD) clean
-	rm -f *.dtbo *.o *.ko *.mod* .*.cmd
+	sudo rm -f *.dtbo *.o *.ko *.mod* .*.cmd
 	sudo rm -f /boot/dtbs/$(shell uname -r)/overlays/$(DTS_NAME).dtbo
 
 dtbo:
@@ -29,9 +29,3 @@ rmmod:
 
 load: rmmod modules insmod
 	sudo dmesg | tail -n 10
-
-dtbo_pp:
-	cpp -nostdinc -I $(KER_PATH)/include $(DTS_NAME).dts > $(DTS_NAME).pp.dts
-
-decompile:
-	dtc -I dtb -O dts -o am335x-boneblack.dts /boot/dtbs/`uname -r`/am335x-boneblack.dtb
