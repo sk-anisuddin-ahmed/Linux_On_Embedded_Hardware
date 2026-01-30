@@ -1,17 +1,17 @@
-obj-m += uart2_ker.o
-
-DTS_NAME := BBB_UART2
-KER_PATH := /lib/modules/$(shell uname -r)/build
+obj-m := spi0_ker.o
+KER_PATH = /lib/modules/$(shell uname -r)/build
+DTS_NAME = BBB_SPI0
 MOD_NAME := $(basename $(obj-m))
+KO_NAME := $(MOD_NAME).ko
 
-all: clean load dtbo
+all: load dtbo
 
 modules:
 	$(MAKE) -C $(KER_PATH) M=$(PWD) modules
 
 clean: rmmod
 	$(MAKE) -C $(KER_PATH) M=$(PWD) clean
-	sudo rm -f *.dtbo *.o *.ko *.mod* .*.cmd
+	rm -f *.dtbo *.o *.ko *.mod* .*.cmd
 	sudo rm -f /boot/dtbs/$(shell uname -r)/overlays/$(DTS_NAME).dtbo
 
 dtbo:
@@ -20,12 +20,12 @@ dtbo:
 	sudo nano /boot/uEnv.txt
 
 insmod:
-	sudo insmod $(MOD_NAME).ko
+	sudo insmod $(KO_NAME)
+	sudo dmesg | tail -n 10
 
 rmmod:
 	@if lsmod | grep -q "^$(MOD_NAME)"; then \
 		sudo rmmod $(MOD_NAME); \
 	fi
 
-load: rmmod modules insmod
-	sudo dmesg -C && sudo dmesg
+load: clean modules insmod
