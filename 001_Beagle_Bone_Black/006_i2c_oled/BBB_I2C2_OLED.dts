@@ -1,0 +1,45 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+	fragment@0 {
+		target = <&ocp>;
+		__overlay__ {
+			P9_19_pinmux { 
+				status = "disabled";
+			};
+			P9_20_pinmux { 
+				status = "disabled"; 
+			};
+		};
+	};
+
+	fragment@1 {
+		target = <&am33xx_pinmux>;
+		__overlay__ {
+			bb_i2c2_pins: pinmux_bb_i2c2_pins {
+				pinctrl-single,pins = <
+					BONE_P9_20 0x73
+					BONE_P9_19 0x73
+				>;
+			};
+		};
+	};
+
+	fragment@2 {
+		target = <&i2c2>;
+		__overlay__ {
+			status = "okay";
+			pinctrl-names = "default";
+			pinctrl-0 = <&bb_i2c2_pins>;
+			clock-frequency = <400000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			
+			oled: ssd1306@60 {
+				compatible = "ssd1306-oled-i2c2";
+				reg = <0x3c>;
+			};
+		};
+	};
+};
