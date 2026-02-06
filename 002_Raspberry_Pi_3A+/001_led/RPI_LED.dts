@@ -1,0 +1,20 @@
+/dts-v1/;
+/plugin/;
+
+#include "dt-bindings/gpio/gpio.h"
+
+/ {
+    compatible = "brcm,bcm2835", "brcm,bcm2836", "brcm,bcm2837";
+
+    fragment@0 {
+        target-path = "/";
+        __overlay__ {
+            my_led {
+                compatible = "rpi,led";
+                status = "okay";
+
+                gpios = <&gpio 17 GPIO_ACTIVE_HIGH>;
+            };
+        };
+    };
+};
