@@ -17,10 +17,7 @@
                 interrupts = <24 IRQ_TYPE_EDGE_FALLING>;
                 interrupt-parent = <&gpio>;
 
-                led-gpios = <&gpio 17 GPIO_ACTIVE_HIGH>,
-                            <&gpio 27 GPIO_ACTIVE_HIGH>,
-                            <&gpio 22 GPIO_ACTIVE_HIGH>,
-                            <&gpio 23 GPIO_ACTIVE_HIGH>;
+                led-gpios = <&gpio 17 GPIO_ACTIVE_HIGH>;
                 btn-gpios = <&gpio 24 GPIO_ACTIVE_LOW>;
             };
         };

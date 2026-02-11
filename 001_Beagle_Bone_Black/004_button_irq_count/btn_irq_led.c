@@ -12,11 +12,6 @@ static struct gpio_desc *led[4];
 static struct gpio_desc *btn;
 static int irq_num, irq_cnt;
 
-static irqreturn_t button_irq_handler(int irq, void *dev_id)
-{       
-    return IRQ_WAKE_THREAD;
-}
-
 static irqreturn_t button_irq_thread(int irq, void *dev_id)
 {
     irq_cnt++;
@@ -57,7 +52,7 @@ static int btn_led_probe(struct platform_device *pdev)
         return irq_num;
     }
 
-    ret = devm_request_threaded_irq(&pdev->dev, irq_num, button_irq_handler, button_irq_thread, IRQF_TRIGGER_FALLING, "button_irq", NULL);
+    ret = devm_request_threaded_irq(&pdev->dev, irq_num, NULL, button_irq_thread, IRQF_TRIGGER_FALLING, "button_irq", NULL);
     if (ret) 
     {
         dev_err(&pdev->dev, "Failed to request threaded IRQ\n");
